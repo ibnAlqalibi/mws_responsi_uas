@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-import 'package:mws_responsi/pages/login.dart';
+import 'package:mws_responsi/app/screens/login.dart';
+import 'package:mws_responsi/app/screens/mainPage.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,19 +29,28 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  int _counter = 5; // Durasi splash screen dalam detik
+  int _counter = 3; // Durasi splash screen dalam detik
+  final secureStorage = const FlutterSecureStorage();
 
   @override
   void initState() {
     super.initState();
 
     // Timer untuk menghitung mundur dan pindah ke halaman berikutnya setelah waktu habis
-    Timer.periodic(const Duration(seconds: 1), (timer) {
+    Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (_counter == 1) {
-        timer.cancel(); // Hentikan timer saat sudah 0
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginPage()),
-        );
+        timer.cancel();
+
+        final accessToken = await secureStorage.read(key: 'access_token');
+        if (accessToken != null) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const MainPage()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        }
       } else {
         setState(() {
           _counter--;

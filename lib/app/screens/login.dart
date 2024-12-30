@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:mws_responsi/pages/forgetpass.dart';
-import 'package:mws_responsi/pages/regist.dart';
-import 'package:mws_responsi/pages/widget.dart';
+import 'package:mws_responsi/app/screens/regist.dart';
+import 'package:mws_responsi/app/screens/mainPage.dart';
+import 'dart:convert'; // Tambahkan ini untuk memparsing JSON
+import 'package:mws_responsi/app/service/auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -14,14 +15,59 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  String _fetchedData = "";
 
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      // Navigate to MainPage if the login is successful
+  void loginRequest() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await login(_emailController.text, _passwordController.text);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Login berhasil!")),
+      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainPage()),
       );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Login gagal: $e")),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void handleFetchData() async {
+    try {
+      final jsonResponse = await fetchProtectedData();
+      final Map<String, dynamic> data = jsonDecode(jsonResponse);
+      setState(() {
+        _fetchedData = '''
+id: ${data['id']}
+nama: ${data['name']}
+email: ${data['email']}
+akun dibuat: ${data['created_at']}
+        ''';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Data berhasil diambil!")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Gagal mengambil data: $e")),
+      );
+    }
+  }
+
+  void _login() {
+    if (_formKey.currentState!.validate()) {
+      loginRequest();
     }
   }
 
@@ -163,7 +209,7 @@ class _LoginPageState extends State<LoginPage> {
                           GestureDetector(
                             onTap: () {
                               // Navigate to the registration page when "Daftar" is clicked
-                              Navigator.push(
+                              Navigator.pushReplacement(
                                 context,
                                 MaterialPageRoute(
                                     builder: (context) => DaftarPage()),
@@ -177,26 +223,12 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ],
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          // Navigate to the forgot password page
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => LupaPasswordPage()),
-                          );
-                        },
-                        child: const Text(
-                          'Lupa password?',
-                          style: TextStyle(color: Colors.blue, fontSize: 13),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 45),
 
                   ElevatedButton(
-                    onPressed: _login,
+                    onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4285F4),
                       padding: const EdgeInsets.symmetric(
@@ -205,9 +237,9 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Masuk',
-                      style: TextStyle(
+                    child: Text(
+                      _isLoading ? "Loading..." : 'Masuk',
+                      style: const TextStyle(
                           color: Colors.white,
                           fontSize: 24,
                           fontWeight: FontWeight.w600),
